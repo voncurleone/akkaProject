@@ -6,7 +6,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 object DeviceManager {
   //todo: design DeviceManager from "The Registration Protocol"
   trait Command
-  final case class RequestTrackDevice(groupId: String, deciceId: String, replyTo: ActorRef[DeviceRegistered])
+  final case class RequestTrackDevice(groupId: String, deviceId: String, replyTo: ActorRef[DeviceRegistered])
     extends DeviceManager.Command
     with DeviceGroup.Command
   final case class DeviceRegistered(device: ActorRef[Device.Command])
@@ -29,7 +29,7 @@ class DeviceManager(context: ActorContext[DeviceManager.Command])
 
   override def onMessage(msg: DeviceManager.Command): Behavior[DeviceManager.Command] = {
     msg match {
-      case RequestTrackDevice(groupId, deciceId, replyTo) =>
+      case RequestTrackDevice(groupId, deviceId, replyTo) =>
         ???
     }
   }
