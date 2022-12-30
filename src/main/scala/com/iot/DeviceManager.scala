@@ -11,7 +11,7 @@ object DeviceManager {
     with DeviceGroup.Command
   final case class DeviceRegistered(device: ActorRef[Device.Command])
 
-  //commands for querrying and testing
+  //commands for querying and testing
   final case class RequestDeviceList(requestId: Long, groupId: String, replyTo: ActorRef[ReplyDeviceList])
     extends DeviceManager.Command
     with DeviceGroup.Command
