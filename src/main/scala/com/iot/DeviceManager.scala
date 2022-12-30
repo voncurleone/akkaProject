@@ -9,8 +9,14 @@ object DeviceManager {
   final case class RequestTrackDevice(groupId: String, deciceId: String, replyTo: ActorRef[DeviceRegistered])
     extends DeviceManager.Command
     with DeviceGroup.Command
-
   final case class DeviceRegistered(device: ActorRef[Device.Command])
+
+  //commands for querrying and testing
+  final case class RequestDeviceList(requestId: Long, groupId: String, replyTo: ActorRef[ReplyDeviceList])
+    extends DeviceManager.Command
+    with DeviceGroup.Command
+
+  final case class ReplyDeviceList(requestId: Long, ids: Set[String])
 
   def apply(): Behavior[Command] =
     Behaviors.setup( new DeviceManager(_) )
@@ -18,8 +24,8 @@ object DeviceManager {
 
 class DeviceManager(context: ActorContext[DeviceManager.Command])
   extends AbstractBehavior[DeviceManager.Command](context) {
-  import DeviceManager.{RequestTrackDevice}
-  var groups: Map[String, ActorRef[DeviceGroup]]
+  import DeviceManager._
+  var groups: Map[String, ActorRef[DeviceGroup]] = ???
 
   override def onMessage(msg: DeviceManager.Command): Behavior[DeviceManager.Command] = {
     msg match {
