@@ -93,5 +93,20 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
 
       deviceOne should === (deviceTwo)
     }
+
+    "be able to list active devices in the group" in {
+      val registerProbe = createTestProbe[DeviceRegistered]()
+      val group = spawn(DeviceGroup("group:0"))
+
+      group ! RequestTrackDevice("group:0", "device:0", registerProbe.ref)
+      registerProbe.receiveMessage()
+
+      group ! RequestTrackDevice("group:0", "device:1", registerProbe.ref)
+      registerProbe.receiveMessage()
+
+      val deviceListProbe = createTestProbe[ReplyDeviceList]()
+      group ! RequestDeviceList(0, "group:0", deviceListProbe.ref)
+      deviceListProbe.expectMessage(ReplyDeviceList(0, Set("device:1", "device:0")))
+    }
   }
 }
