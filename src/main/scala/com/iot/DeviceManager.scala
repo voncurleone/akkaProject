@@ -1,10 +1,9 @@
 package com.iot
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
-import akka.actor.typed.{ActorRef, Behavior}
+import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 
 object DeviceManager {
-  //todo: design DeviceManager from "The Registration Protocol"
   trait Command
   final case class RequestTrackDevice(groupId: String, deviceId: String, replyTo: ActorRef[DeviceRegistered])
     extends DeviceManager.Command
@@ -25,12 +24,20 @@ object DeviceManager {
 class DeviceManager(context: ActorContext[DeviceManager.Command])
   extends AbstractBehavior[DeviceManager.Command](context) {
   import DeviceManager._
-  var groups: Map[String, ActorRef[DeviceGroup]] = ???
+
+  var groups: Map[String, ActorRef[DeviceGroup.Command]] = Map()
+  context.log.info("Device manager started")
 
   override def onMessage(msg: DeviceManager.Command): Behavior[DeviceManager.Command] = {
     msg match {
       case RequestTrackDevice(groupId, deviceId, replyTo) =>
         ???
     }
+  }
+
+  override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
+    case PostStop =>
+      context.log.info("Device manager has been stopped")
+      this
   }
 }
