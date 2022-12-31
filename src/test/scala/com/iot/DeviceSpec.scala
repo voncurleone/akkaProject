@@ -108,5 +108,28 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       group ! RequestDeviceList(0, "group:0", deviceListProbe.ref)
       deviceListProbe.expectMessage(ReplyDeviceList(0, Set("device:1", "device:0")))
     }
+
+    "be able to list active devices after one has shut down" in {
+      val registerProbe = createTestProbe[DeviceRegistered]()
+      val group = spawn(DeviceGroup("group:0"))
+
+      group ! RequestTrackDevice("group:0", "device:0", registerProbe.ref)
+      val toShutdown = registerProbe.receiveMessage().device
+
+      group ! RequestTrackDevice("group:0", "device:1", registerProbe.ref)
+      registerProbe.receiveMessage()
+
+      val deviceListProbe = createTestProbe[ReplyDeviceList]()
+      group ! RequestDeviceList(0, "group:0", deviceListProbe.ref)
+      deviceListProbe.expectMessage(ReplyDeviceList(0, Set("device:1", "device:0")))
+
+      toShutdown ! Passivate
+      registerProbe.expectTerminated(toShutdown, registerProbe.remainingOrDefault)
+
+      registerProbe.awaitAssert {
+        group ! RequestDeviceList(  1, "group:0", deviceListProbe.ref)
+        deviceListProbe.expectMessage(ReplyDeviceList(1, Set("device:1")))
+      }
+    }
   }
 }
