@@ -10,6 +10,7 @@ object Device {
   final case class RespondTemp(requestId: Long, value: Option[Double])
   final case class RecordTemp(requestId: Long, value: Double, replyTo: ActorRef[TempRecorded]) extends Command
   final case class TempRecorded(requestId: Long)
+  case object Passivate extends Command
 
   def apply(groupId: String, deviceId: String): Behavior[Command] =
     Behaviors.setup(new Device(_, groupId, deviceId))
@@ -33,6 +34,9 @@ class Device(context: ActorContext[Device.Command], groupId: String, deviceId: S
         lastTemp = Some(value)
         replyTo ! TempRecorded(requestId)
         this
+
+      case Passivate =>
+        Behaviors.stopped
     }
   }
 
