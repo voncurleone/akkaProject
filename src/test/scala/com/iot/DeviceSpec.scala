@@ -1,6 +1,7 @@
 package com.iot
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.wordspec.AnyWordSpecLike
 
 class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
@@ -72,6 +73,12 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       recordProbe.expectMessage(TempRecorded(1))
     }
 
-    //todo: test for requsting an incorrect group id
+    "ignore request with incorrect groupId" in {
+      val probe = createTestProbe[DeviceRegistered]()
+      val deviceGroup = spawn(DeviceGroup("group:2"))
+
+      deviceGroup ! RequestTrackDevice("group:0", "device:42", probe.ref)
+      probe.expectNoMessage(1.second)
+    }
   }
 }
