@@ -5,6 +5,7 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, Log
 
 object DeviceGroup {
   trait Command
+  final case class DeviceTerminated(deviceActor: ActorRef[Device.Command], groupId: String, deviceId: String) extends Command
 
   def apply(groupId: String): Behavior[Command] =
     Behaviors.setup(new DeviceGroup(_, groupId))
@@ -30,6 +31,8 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
             //val name = s"Device: $deviceId"
             //context.log.warn(name)
             val deviceActor = context.spawn(Device(groupId, deviceId), s"Device:$deviceId.")
+            //watch the new device
+            context.watchWith(deviceActor, DeviceTerminated(deviceActor, groupId, deviceId))
             //add new devices to the device map
             devices += deviceId -> deviceActor
             replyTo ! DeviceRegistered(deviceActor)
@@ -38,6 +41,18 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
 
       case RequestTrackDevice(gId, _, _) =>
         context.log.warn2("Ignoring request for {}. This actor is responsible for device group: {}", gId, groupId)
+        this
+
+      case RequestDeviceList(requestId, gId, replyTo) =>
+        if( gId == groupId ) {
+          replyTo ! ReplyDeviceList(requestId, devices.keySet)
+          this
+        }
+        else Behaviors.unhandled
+
+      case DeviceTerminated(_, _, deviceId) =>
+        context.log.info("Device actor {} has been terminated.")
+        devices -= deviceId
         this
     }
   }
