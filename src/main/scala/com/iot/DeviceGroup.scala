@@ -51,7 +51,7 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
         else Behaviors.unhandled
 
       case DeviceTerminated(_, _, deviceId) =>
-        context.log.info("Device actor {} has been terminated.")
+        context.log.info("Device actor {} has been terminated.", deviceId)
         devices -= deviceId
         this
     }
