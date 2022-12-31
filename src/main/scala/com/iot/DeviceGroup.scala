@@ -28,8 +28,6 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
           case None =>
             //create new device
             context.log.info("Creating device actor for {}", deviceId)
-            //val name = s"Device: $deviceId"
-            //context.log.warn(name)
             val deviceActor = context.spawn(Device(groupId, deviceId), s"Device:$deviceId.")
             //watch the new device
             context.watchWith(deviceActor, DeviceTerminated(deviceActor, groupId, deviceId))
