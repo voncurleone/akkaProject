@@ -80,5 +80,18 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       deviceGroup ! RequestTrackDevice("group:0", "device:42", probe.ref)
       probe.expectNoMessage(1.second)
     }
+
+    "device Id will always returns the same actor" in {
+      val probe = createTestProbe[DeviceRegistered]()
+      val deviceGroup = spawn(DeviceGroup("group:1"))
+
+      deviceGroup ! RequestTrackDevice("group:1", "device:1", probe.ref)
+      val deviceOne = probe.receiveMessage().device
+
+      deviceGroup ! RequestTrackDevice("group:1", "device:1", probe.ref)
+      val deviceTwo = probe.receiveMessage().device
+
+      deviceOne should === (deviceTwo)
+    }
   }
 }
