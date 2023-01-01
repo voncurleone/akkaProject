@@ -2,6 +2,7 @@ package com.iot
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
+import com.iot.DeviceGroup.DeviceTerminated
 
 object DeviceManager {
   trait Command
@@ -14,8 +15,10 @@ object DeviceManager {
   final case class RequestDeviceList(requestId: Long, groupId: String, replyTo: ActorRef[ReplyDeviceList])
     extends DeviceManager.Command
     with DeviceGroup.Command
-
   final case class ReplyDeviceList(requestId: Long, ids: Set[String])
+
+  //command for a terminated DeviceGroup
+  final case class DeviceGroupTerminated(groupId: String) extends DeviceManager.Command
 
   def apply(): Behavior[Command] =
     Behaviors.setup( new DeviceManager(_) )
@@ -30,8 +33,33 @@ class DeviceManager(context: ActorContext[DeviceManager.Command])
 
   override def onMessage(msg: DeviceManager.Command): Behavior[DeviceManager.Command] = {
     msg match {
-      case RequestTrackDevice(groupId, deviceId, replyTo) =>
-        ???
+      case request @ RequestTrackDevice(groupId, deviceId, replyTo) =>
+        groups.get(groupId) match {
+          case Some(ref) =>
+            ref ! request
+          case None =>
+            context.log.info("Creating DeviceGroup actor {}", groupId)
+            val deviceGroup = context.spawn(DeviceGroup(groupId), s"$groupId")
+            context.watchWith(deviceGroup, DeviceGroupTerminated(groupId))
+            deviceGroup ! request
+            groups += groupId -> deviceGroup
+        }
+        this
+
+      case request @ RequestDeviceList(requestId, groupId, replyTo) =>
+        groups.get(groupId) match {
+          case Some(ref) =>
+            ref ! request
+
+          case None =>
+            replyTo ! ReplyDeviceList(requestId, Set.empty)
+        }
+        this
+
+      case DeviceGroupTerminated(groupId) =>
+        context.log.info("Device group stopped {}", groupId)
+        groups -= groupId
+        this
     }
   }
 
