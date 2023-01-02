@@ -134,6 +134,82 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
   }
 
   "Device Manager" must {
-    //todo write tests for device manager. They should be similar to Device group
+    "register device actors" in {
+      val deviceManager = spawn(DeviceManager())
+      val probe = createTestProbe[DeviceRegistered]()
+
+      deviceManager ! RequestTrackDevice("group:0", "device:0", probe.ref)
+      val device0 = probe.receiveMessage().device
+
+      deviceManager ! RequestTrackDevice("group:0", "device:1", probe.ref)
+      val device1 = probe.receiveMessage().device
+      device0 should !== (device1)
+
+      val tempProbe = createTestProbe[TempRecorded]()
+      device0 ! RecordTemp(0, 5.5, tempProbe.ref)
+      tempProbe.expectMessage(TempRecorded(0))
+      device1 ! RecordTemp(1, 3.3, tempProbe.ref)
+      tempProbe.expectMessage(TempRecorded(1))
+    }
+
+    "return correct device for given Id" in {
+      val deviceProbe = createTestProbe[DeviceRegistered]()
+      val deviceManager = spawn(DeviceManager())
+
+      deviceManager ! RequestTrackDevice("group:0", "device:0", deviceProbe.ref)
+      val device0 = deviceProbe.receiveMessage().device
+
+      deviceManager ! RequestTrackDevice("group:0", "device:0", deviceProbe.ref)
+      val device1 = deviceProbe.receiveMessage().device
+
+      device0 should === (device1)
+    }
+
+    "list all active actors in a group" in {
+      val deviceListProbe = createTestProbe[ReplyDeviceList]()
+      val deviceProbe = createTestProbe[DeviceRegistered]()
+      val deviceManager = spawn(DeviceManager())
+
+      deviceManager ! RequestTrackDevice("group:0", "device:0", deviceProbe.ref)
+      deviceProbe.receiveMessage()
+
+      deviceManager ! RequestTrackDevice("group:0", "device:1", deviceProbe.ref)
+      deviceProbe.receiveMessage()
+
+      deviceManager ! RequestTrackDevice("group:1", "device:2", deviceProbe.ref)
+      deviceProbe.receiveMessage()
+
+      deviceManager ! RequestDeviceList(0, "group:0", deviceListProbe.ref)
+      deviceListProbe.expectMessage(ReplyDeviceList(0, Set("device:0", "device:1")))
+
+      deviceManager ! RequestDeviceList(1, "group:1", deviceListProbe.ref)
+      deviceListProbe.expectMessage(ReplyDeviceList(1, Set("device:2")))
+    }
+
+    "list all active actors once one has been shutdown" in {
+      val deviceListProbe = createTestProbe[ReplyDeviceList]()
+      val deviceProbe = createTestProbe[DeviceRegistered]()
+      val deviceManager = spawn(DeviceManager())
+
+      deviceManager ! RequestTrackDevice("group:0", "device:0", deviceProbe.ref)
+      deviceProbe.receiveMessage()
+
+      deviceManager ! RequestTrackDevice("group:0", "device:1", deviceProbe.ref)
+      val toShutdown = deviceProbe.receiveMessage().device
+
+      deviceManager ! RequestTrackDevice("group:1", "device:2", deviceProbe.ref)
+      deviceProbe.receiveMessage()
+
+      toShutdown ! Passivate
+      deviceProbe.expectTerminated(toShutdown.ref)
+
+      deviceProbe.awaitAssert {
+        deviceManager ! RequestDeviceList(0, "group:0", deviceListProbe.ref)
+        deviceListProbe.expectMessage(ReplyDeviceList(0, Set("device:0")))
+
+        deviceManager ! RequestDeviceList(1, "group:1", deviceListProbe.ref)
+        deviceListProbe.expectMessage(ReplyDeviceList(1, Set("device:2")))
+      }
+    }
   }
 }
