@@ -32,7 +32,7 @@ class DeviceManager(context: ActorContext[DeviceManager.Command])
 
   override def onMessage(msg: DeviceManager.Command): Behavior[DeviceManager.Command] = {
     msg match {
-      case request @ RequestTrackDevice(groupId, deviceId, replyTo) =>
+      case request @ RequestTrackDevice(groupId, _, _) =>
         groups.get(groupId) match {
           case Some(ref) =>
             ref ! request
