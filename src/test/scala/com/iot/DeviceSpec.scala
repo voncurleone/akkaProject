@@ -132,4 +132,8 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       }
     }
   }
+
+  "Device Manager" must {
+    //todo write tests for device manager. They should be similar to Device group
+  }
 }
