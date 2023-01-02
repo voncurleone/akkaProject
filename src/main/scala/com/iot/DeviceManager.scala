@@ -2,7 +2,6 @@ package com.iot
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
-import com.iot.DeviceGroup.DeviceTerminated
 
 object DeviceManager {
   trait Command
