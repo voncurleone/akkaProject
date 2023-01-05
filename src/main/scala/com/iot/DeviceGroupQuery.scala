@@ -36,6 +36,8 @@ class DeviceGroupQuery(
   import DeviceGroupQuery._
   import DeviceManager.{TempReading, Temp, TempNotAvailable, DeviceNotAvailable, DeviceTimeOut, ReplyAllTemps}
 
+  context.log.info(s"Starting query id: $requestId for actor: $requester")
+
   timers.startSingleTimer(ConnectionTimeout, ConnectionTimeout, timeout)
   private val responseAdapter = context.messageAdapter(WrappedRespondTemp.apply)
   private var responses = Map[String, TempReading]()
@@ -54,12 +56,15 @@ class DeviceGroupQuery(
   }
 
   private def onRespondTemp(response: Device.RespondTemp): Behavior[Command] = {
+
     val reading = response.value match {
       case None => TempNotAvailable
       case Some(value) => Temp(value)
     }
 
     val deviceId = response.deviceId
+    context.log.info(s"Received response from deviceId: $deviceId of: ${response.value}")
+
     responses += deviceId -> reading
     awaitingResponse -= deviceId
 
@@ -68,11 +73,14 @@ class DeviceGroupQuery(
   private def onConnectionTimeout(): Behavior[Command] = {
     responses ++= awaitingResponse.map(deviceId => deviceId -> DeviceTimeOut)
     awaitingResponse = Set.empty
+    context.log.info("Connection timout Message received")
 
     respondWhenAllCollected()
   }
+
   private def onDeviceTerminated(deviceId: String): Behavior[Command] = {
     if(awaitingResponse.contains(deviceId)) {
+      context.log.info(s"device: $deviceId has terminated before responding")
       responses += deviceId -> DeviceNotAvailable
       awaitingResponse -= deviceId
     }
@@ -82,6 +90,7 @@ class DeviceGroupQuery(
 
   private def respondWhenAllCollected(): Behavior[Command] = {
     if( awaitingResponse.isEmpty) {
+      context.log.info("Sending response and stopping")
       requester ! ReplyAllTemps(requestId, responses)
       Behaviors.stopped
     } else {
