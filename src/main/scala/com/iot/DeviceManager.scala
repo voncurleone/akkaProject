@@ -19,7 +19,7 @@ object DeviceManager {
   //command for a terminated DeviceGroup
   final case class DeviceGroupTerminated(groupId: String) extends DeviceManager.Command
 
-  protected final case class RequestAllTemps(requestId: Long, groupId: String, replyTo: ActorRef[ReplyAllTemps])
+  final case class RequestAllTemps(requestId: Long, groupId: String, replyTo: ActorRef[ReplyAllTemps])
     extends DeviceGroupQuery.Command
       with DeviceManager.Command
       with DeviceGroup.Command
