@@ -1,6 +1,7 @@
 package com.iot
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import com.iot.DeviceGroupQuery.WrappedRespondTemp
 import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.wordspec.AnyWordSpecLike
 
@@ -210,6 +211,31 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         deviceManager ! RequestDeviceList(1, "group:1", deviceListProbe.ref)
         deviceListProbe.expectMessage(ReplyDeviceList(1, Set("device:2")))
       }
+    }
+  }
+
+  "DeviceGroupQuery" must {
+    "return temperature value from working devices" in {
+      val probeAllTemps = createTestProbe[ReplyAllTemps]()
+
+      val device0 = createTestProbe[Device.Command]()
+      val device1 = createTestProbe[Device.Command]()
+      val devices = Map("0" -> device0.ref, "1" -> device1.ref)
+
+      val queryActor =
+        spawn(DeviceGroupQuery(devices, 0, probeAllTemps.ref, 3.seconds))
+
+      device0.expectMessageType[ReadTemp]
+      device1.expectMessageType[ReadTemp]
+
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "0", Some(3.0)))
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "1", Some(6.0)))
+
+      probeAllTemps.expectMessage(
+        ReplyAllTemps(
+          requestId = 0,
+          temps = Map("0" -> Temp(3.0), "1" -> Temp(6.0)))
+      )
     }
   }
 }
