@@ -7,7 +7,7 @@ import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 object Device {
   sealed trait Command
   final case class ReadTemp(requestId: Long, replyTo: ActorRef[RespondTemp]) extends Command
-  final case class RespondTemp(requestId: Long, value: Option[Double])
+  final case class RespondTemp(requestId: Long, deviceId: String, value: Option[Double])
   final case class RecordTemp(requestId: Long, value: Double, replyTo: ActorRef[TempRecorded]) extends Command
   final case class TempRecorded(requestId: Long)
   case object Passivate extends Command
@@ -26,7 +26,7 @@ class Device(context: ActorContext[Device.Command], groupId: String, deviceId: S
   override def onMessage(msg: Device.Command): Behavior[Device.Command] = {
     msg match {
       case ReadTemp(requestId, replyTo) =>
-        replyTo ! RespondTemp(requestId, lastTemp)
+        replyTo ! RespondTemp(requestId, deviceId, lastTemp)
         this
 
       case RecordTemp(requestId, value, replyTo) =>
