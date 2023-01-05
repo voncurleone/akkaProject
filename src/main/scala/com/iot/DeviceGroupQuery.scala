@@ -3,7 +3,6 @@ package com.iot
 
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior}
-import com.iot
 
 import scala.concurrent.duration.FiniteDuration
 
