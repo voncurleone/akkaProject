@@ -237,5 +237,98 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
           temps = Map("0" -> Temp(3.0), "1" -> Temp(6.0)))
       )
     }
+
+    "return temperature not available for devices that have no reading" in {
+      val probeAllTemps = createTestProbe[ReplyAllTemps]()
+
+      val device0 = createTestProbe[Device.Command]()
+      val device1 = createTestProbe[Device.Command]()
+      val devices = Map("0" -> device0.ref, "1" -> device1.ref)
+
+      val queryActor =
+        spawn(DeviceGroupQuery(devices, 0, probeAllTemps.ref, 3.seconds))
+
+      device0.expectMessageType[ReadTemp]
+      device1.expectMessageType[ReadTemp]
+
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "0", None))
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "1", Some(6.0)))
+
+      probeAllTemps.expectMessage(
+        ReplyAllTemps(
+          requestId = 0,
+          temps = Map("0" -> TempNotAvailable, "1" -> Temp(6.0)))
+      )
+    }
+
+    "return DeviceNotAvailable when the actor has stopped before responding" in {
+      val probeAllTemps = createTestProbe[ReplyAllTemps]()
+
+      val device0 = createTestProbe[Device.Command]()
+      val device1 = createTestProbe[Device.Command]()
+      val devices = Map("0" -> device0.ref, "1" -> device1.ref)
+
+      val queryActor =
+        spawn(DeviceGroupQuery(devices, 0, probeAllTemps.ref, 3.seconds))
+
+      device0.expectMessageType[ReadTemp]
+      device1.expectMessageType[ReadTemp]
+
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "0", Some(3.0)))
+      device1.stop()
+
+      probeAllTemps.expectMessage(
+        ReplyAllTemps(
+          requestId = 0,
+          temps = Map("0" -> Temp(3.0), "1" -> DeviceNotAvailable))
+      )
+    }
+
+    "return the correct temp value if a device stops after responding" in {
+      val probeAllTemps = createTestProbe[ReplyAllTemps]()
+
+      val device0 = createTestProbe[Device.Command]()
+      val device1 = createTestProbe[Device.Command]()
+      val devices = Map("0" -> device0.ref, "1" -> device1.ref)
+
+      val queryActor =
+        spawn(DeviceGroupQuery(devices, 0, probeAllTemps.ref, 3.seconds))
+
+      device0.expectMessageType[ReadTemp]
+      device1.expectMessageType[ReadTemp]
+
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "0", Some(3.0)))
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "1", Some(6.0)))
+      device1.stop()
+
+      probeAllTemps.expectMessage(
+        ReplyAllTemps(
+          requestId = 0,
+          temps = Map("0" -> Temp(3.0), "1" -> Temp(6.0)))
+      )
+    }
+
+    "return DeviceTimeout if the device does not respond in time" in {
+      val probeAllTemps = createTestProbe[ReplyAllTemps]()
+
+      val device0 = createTestProbe[Device.Command]()
+      val device1 = createTestProbe[Device.Command]()
+      val devices = Map("0" -> device0.ref, "1" -> device1.ref)
+
+      val queryActor =
+        spawn(DeviceGroupQuery(devices, 0, probeAllTemps.ref, 2.seconds))
+
+      device0.expectMessageType[ReadTemp]
+      device1.expectMessageType[ReadTemp]
+
+      queryActor ! WrappedRespondTemp(Device.RespondTemp(0, "0", Some(3.0)))
+      //no response from device1
+
+      probeAllTemps.expectMessage(
+        ReplyAllTemps(
+          requestId = 0,
+          temps = Map("0" -> Temp(3.0), "1" -> DeviceTimeOut))
+      )
+    }
   }
 }
