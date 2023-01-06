@@ -5,14 +5,44 @@ import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, Log
 
 import scala.concurrent.duration.DurationInt
 
+/**
+ * Factory object for [[DeviceGroup]]
+ *
+ * Contains [[com.iot.DeviceGroup.Command message protocol]] for [[DeviceGroup]]
+ */
 object DeviceGroup {
+  /**
+   * Root type for [[DeviceGroup]] message protocol
+   *
+   * child: [[DeviceTerminated]]
+   */
   trait Command
+
+  /**
+   * Message used to signal that a device actor has stopped.
+   *
+   * @param deviceActor The [[Device device actor]] that stopped
+   * @param groupId unique group id
+   * @param deviceId unique device id
+   */
   final case class DeviceTerminated(deviceActor: ActorRef[Device.Command], groupId: String, deviceId: String) extends Command
 
+  /**
+   * Creates a DeviceGroup actor.
+   *
+   * @param groupId unique group id
+   * @return A DeviceGroup actor
+   */
   def apply(groupId: String): Behavior[Command] =
     Behaviors.setup(new DeviceGroup(_, groupId))
 }
 
+/**
+ * DeviceGroup actor. This actor manages a group of [[Device]] actors.
+ *
+ * @param context DeviceGroup's [[https://doc.akka.io/api/akka/current/akka/actor/ActorContext.html ActorContext]]
+ * @param groupId unique group identifier
+ */
 class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
   extends AbstractBehavior[DeviceGroup.Command](context) {
   import DeviceGroup._
@@ -27,6 +57,11 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
   private var devices: Map[String, ActorRef[Device.Command]] = Map()
   context.log.info("DeviceGroup {} started", groupId)
 
+  /**
+   *
+   * @param msg
+   * @return
+   */
   override def onMessage(msg: DeviceGroup.Command): Behavior[DeviceGroup.Command] = {
     msg match {
       case RequestTrackDevice(`groupId`, deviceId, replyTo) =>
