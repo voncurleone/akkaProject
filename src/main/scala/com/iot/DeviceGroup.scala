@@ -23,7 +23,7 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
     ReplyDeviceList,
     RequestAllTemps
   }
-  
+
   private var devices: Map[String, ActorRef[Device.Command]] = Map()
   context.log.info("DeviceGroup {} started", groupId)
 
