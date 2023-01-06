@@ -1,6 +1,7 @@
 package com.iot
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import akka.actor.typed.SpawnProtocol.Spawn
 import com.iot.DeviceGroupQuery.WrappedRespondTemp
 import org.scalatest.time.SpanSugar.convertIntToGrainOfTime
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -131,6 +132,37 @@ class DeviceSpec extends ScalaTestWithActorTestKit with AnyWordSpecLike {
         group ! RequestDeviceList(  1, "group:0", deviceListProbe.ref)
         deviceListProbe.expectMessage(ReplyDeviceList(1, Set("device:1")))
       }
+    }
+
+    "be able to collect all temps from all active devices" in {
+      val groupActor = spawn(DeviceGroup("0"))
+      val allTempsProbe = createTestProbe[ReplyAllTemps]()
+      val registerProbe = createTestProbe[DeviceRegistered]()
+
+      groupActor ! RequestTrackDevice("0", "1", registerProbe.ref)
+      val device1 = registerProbe.receiveMessage().device
+
+      groupActor ! RequestTrackDevice("0", "2", registerProbe.ref)
+      val device2 = registerProbe.receiveMessage().device
+
+      groupActor ! RequestTrackDevice("0", "3", registerProbe.ref)
+      registerProbe.receiveMessage()
+
+      val recordedProbe = createTestProbe[TempRecorded]()
+      device1 ! RecordTemp(0, 2.6, recordedProbe.ref)
+      recordedProbe.expectMessage(TempRecorded(0))
+      device2 ! RecordTemp(1, 6.8, recordedProbe.ref)
+      recordedProbe.expectMessage(TempRecorded(1))
+      //left out device 3 so we can test the case when a temp is unavailable
+
+      groupActor ! RequestAllTemps(0, "0", allTempsProbe.ref)
+
+      allTempsProbe.expectMessage(
+        ReplyAllTemps(
+          requestId = 0,
+          Map("1" -> Temp(2.6), "2" -> Temp(6.8), "3" -> TempNotAvailable)
+        )
+      )
     }
   }
 
