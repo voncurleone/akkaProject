@@ -64,7 +64,7 @@ object Device {
    *
    * @param groupId Group the device belongs to
    * @param deviceId uniquely identify the device
-   * @return A device actor [[Device]]
+   * @return A device actor
    */
   def apply(groupId: String, deviceId: String): Behavior[Command] =
     Behaviors.setup(new Device(_, groupId, deviceId))
