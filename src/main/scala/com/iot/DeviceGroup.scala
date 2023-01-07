@@ -58,9 +58,16 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
   context.log.info("DeviceGroup {} started", groupId)
 
   /**
+   * Handles [[Command messages]] sent to the DeviceGroup actor.
    *
-   * @param msg
-   * @return
+   * [[Command Messages]] supported by DeviceGroup:
+   *  - [[RequestTrackDevice]]
+   *  - [[RequestDeviceList]]
+   *  - [[DeviceTerminated]]
+   *  - [[RequestAllTemps]]
+   *
+   * @param msg A [[Command message]] received by the DeviceGroup actor.
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
    */
   override def onMessage(msg: DeviceGroup.Command): Behavior[DeviceGroup.Command] = {
     msg match {
@@ -104,6 +111,14 @@ class DeviceGroup(context: ActorContext[DeviceGroup.Command], groupId: String)
     }
   }
 
+  /**
+   * Handles [[https://doc.akka.io/api/akka/current/akka/actor/typed/Signal.html signals]] received by DeviceGroup
+   *
+   * [[https://doc.akka.io/api/akka/current/akka/actor/typed/Signal.html Signals]] handled:
+   *  - [[https://doc.akka.io/api/akka/current/akka/actor/typed/PostStop.html PostStop]]
+   *
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
     case PostStop =>
       context.log.info("DeviceGroup {} stopped", groupId)
