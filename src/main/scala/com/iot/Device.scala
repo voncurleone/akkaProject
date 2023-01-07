@@ -90,7 +90,7 @@ class Device(context: ActorContext[Device.Command], groupId: String, deviceId: S
   context.log.info2("Device actor started {}-{}", groupId, deviceId)
 
   /**
-   * Handles [[Command messages]] send to the [[Device device]]
+   * Handles [[Command messages]] sent to the [[Device device]]
    *
    * [[Command Messages]] that are supported by Device:
    *  - [[ReadTemp]]
