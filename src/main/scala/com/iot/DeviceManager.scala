@@ -3,11 +3,39 @@ package com.iot
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop, Signal}
 
+/**
+ * Factory object for [[DeviceManager]]
+ *
+ * Contains [[com.iot.DeviceGroup.Command message protocol]] for [[DeviceManager]]
+ */
 object DeviceManager {
+
+  /**
+   * Root type for [[DeviceManager]] message protocol
+   *
+   * Children:
+   *  - [[RequestTrackDevice]]
+   *  - [[RequestDeviceList]]
+   */
   trait Command
+
+  /**
+   * Message used to request a [[DeviceGroup]] to track a [[Device]]
+   *
+   * @param groupId unique Id for the device group that will track the [[Device]]
+   * @param deviceId unique Id to identify the [[Device]]
+   * @param replyTo Actor that will be notified when the [[Device]] is registered in the
+   *                [[DeviceGroup]] with a [[DeviceRegistered message]]
+   */
   final case class RequestTrackDevice(groupId: String, deviceId: String, replyTo: ActorRef[DeviceRegistered])
     extends DeviceManager.Command
     with DeviceGroup.Command
+
+  /**
+   * Message sent when a [[Device]] is registered to a [[DeviceGroup]]
+   *
+   * @param device A [[Device]] actor
+   */
   final case class DeviceRegistered(device: ActorRef[Device.Command])
 
   //commands for querying and testing
