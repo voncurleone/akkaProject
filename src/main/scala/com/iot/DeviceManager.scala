@@ -38,28 +38,90 @@ object DeviceManager {
    */
   final case class DeviceRegistered(device: ActorRef[Device.Command])
 
-  //commands for querying and testing
+  /**
+   * Message used to obtain a list of the [[Device devices]] tracked by the [[DeviceGroup]]
+   *
+   * @param requestId Unique Id for identifying the request
+   * @param groupId Unique Id for identifying the group
+   * @param replyTo Actor to send [[RequestDeviceList response]] to
+   */
   final case class RequestDeviceList(requestId: Long, groupId: String, replyTo: ActorRef[ReplyDeviceList])
     extends DeviceManager.Command
     with DeviceGroup.Command
+
+  /**
+   * Message sent as a reply to a [[RequestDeviceList]] message
+   *
+   * @param requestId Unique Id for identifying the request
+   * @param ids Set of [[Device]] Ids that the [[DeviceGroup]] tracks
+   */
   final case class ReplyDeviceList(requestId: Long, ids: Set[String])
 
-  //command for a terminated DeviceGroup
+  /**
+   * Message sent to the [[DeviceManager]] actor when one of the [[DeviceGroup DeviceGroups]] it manages is stopped
+   *
+   * @param groupId Unique Id that Identifies the [[DeviceGroup]] that has stopped
+   */
   final case class DeviceGroupTerminated(groupId: String) extends DeviceManager.Command
 
+  /**
+   * Message used to obtain temps from all the [[Device Devices]] tracked by the [[DeviceGroup]]
+   *
+   * @param requestId Unique Id to identify the request
+   * @param groupId Unique Id to identify the [[DeviceGroup]]
+   * @param replyTo Actor to send [[ReplyAllTemps response]] to
+   */
   final case class RequestAllTemps(requestId: Long, groupId: String, replyTo: ActorRef[ReplyAllTemps])
     extends DeviceGroupQuery.Command
       with DeviceManager.Command
       with DeviceGroup.Command
 
+  /**
+   * Message sent as a reply to a [[RequestAllTemps]] message
+   *
+   * @param requestId Unique Id to identify the request
+   * @param temps A map from DeviceId to [[TempReading]]
+   */
   final case class ReplyAllTemps(requestId: Long, temps: Map[String, TempReading])
 
+  /**
+   * Type representing a Temp reading
+   *
+   * It covers the cases:
+   *  - The [[Device]] has a temp available: [[Temp]]
+   *  - The [[Device]] has no reading available: [[TempNotAvailable]]
+   *  - The [[Device]] is not available to provide a reading: [[DeviceNotAvailable]]
+   *  - The [[Device]] has timed out: [[DeviceTimeOut]]
+   */
   sealed trait TempReading
+
+  /**
+   * The [[Device]] has a temp available
+   *
+   * @param value The temp reading
+   */
   final case class Temp(value: Double) extends TempReading
+
+  /**
+   * The [[Device]] has no reading available
+   */
   case object TempNotAvailable extends TempReading
+
+  /**
+   * The [[Device]] is not available to provide a reading
+   */
   case object DeviceNotAvailable extends TempReading
+
+  /**
+   * The [[Device]] has timed out
+   */
   case object DeviceTimeOut extends TempReading
 
+  /**
+   * Creates a DeviceManager actor
+   *
+   * @return A [[DeviceManager]] actor
+   */
   def apply(): Behavior[Command] =
     Behaviors.setup( new DeviceManager(_) )
 }
@@ -103,6 +165,14 @@ class DeviceManager(context: ActorContext[DeviceManager.Command])
     }
   }
 
+  /**
+   * Handles [[https://doc.akka.io/api/akka/current/akka/actor/typed/Signal.html signals]] received by [[DeviceManager]]
+   *
+   * [[https://doc.akka.io/api/akka/current/akka/actor/typed/Signal.html Signals]] handled:
+   *  - [[https://doc.akka.io/api/akka/current/akka/actor/typed/PostStop.html PostStop]]
+   *
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   override def onSignal: PartialFunction[Signal, Behavior[Command]] = {
     case PostStop =>
       context.log.info("Device manager has been stopped")
