@@ -14,7 +14,11 @@ object DeviceGroup {
   /**
    * Root type for [[DeviceGroup]] message protocol
    *
-   * child: [[DeviceTerminated]]
+   * children:
+   *  - [[DeviceTerminated]]
+   *  - [[com.iot.DeviceManager.RequestTrackDevice RequestTrackDevice]]
+   *  - [[com.iot.DeviceManager.RequestDeviceList RequestDeviceList]]
+   *  - [[com.iot.DeviceManager.RequestAllTemps RequestAllTemps]]
    */
   trait Command
 
