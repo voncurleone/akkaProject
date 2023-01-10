@@ -126,6 +126,11 @@ object DeviceManager {
     Behaviors.setup( new DeviceManager(_) )
 }
 
+/**
+ * DeviceManager actor. This actor manages a group of [[DeviceGroup DeviceGroups]]
+ *
+ * @param context DeviceManagers [[https://doc.akka.io/api/akka/current/akka/actor/ActorContext.html ActorContext]]
+ */
 class DeviceManager(context: ActorContext[DeviceManager.Command])
   extends AbstractBehavior[DeviceManager.Command](context) {
   import DeviceManager._
@@ -133,6 +138,17 @@ class DeviceManager(context: ActorContext[DeviceManager.Command])
   var groups: Map[String, ActorRef[DeviceGroup.Command]] = Map()
   context.log.info("Device manager started")
 
+  /**
+   * Handles [[Command messages]] sent to DeviceManager actor
+   *
+   * [[Command Messages]] supported by DeviceManager:
+   *  - [[RequestTrackDevice]]
+   *  - [[RequestDeviceList]]
+   *  - [[DeviceGroupTerminated]]
+   *
+   * @param msg The [[Command message]]
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   override def onMessage(msg: DeviceManager.Command): Behavior[DeviceManager.Command] = {
     msg match {
       case request @ RequestTrackDevice(groupId, _, _) =>
