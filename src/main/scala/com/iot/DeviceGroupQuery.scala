@@ -1,17 +1,55 @@
 package com.iot
 
-
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors, TimerScheduler}
 import akka.actor.typed.{ActorRef, Behavior}
 
 import scala.concurrent.duration.FiniteDuration
 
+/**
+ * Factory object for [[DeviceGroupQuery]]
+ *
+ * Contains [[com.iot.DeviceGroupQuery.Command message protocol]] for DeviceGroupQuery
+ */
 object DeviceGroupQuery {
+
+  /**
+   * Root type for [[DeviceGroupQuery]] message protocol
+   *
+   * Children:
+   *  - [[WrappedRespondTemp]]
+   *  - [[ConnectionTimeout]]
+   *  - [[DeviceTerminated]]
+   */
   trait Command
+
+  /**
+   * Wrapper for a [[Device.RespondTemp RespondTemp]] message.
+   *
+   * @param reply A [[Device.RespondTemp]] Message
+   */
   final case class WrappedRespondTemp(reply: Device.RespondTemp) extends Command
+
+  /**
+   * Message that signals that the query has timed out
+   */
   private case object ConnectionTimeout extends Command
+
+  /**
+   * Message that signals that a tracked [[Device]] has been terminated
+   *
+   * @param deviceId Unique Id for identifying the [[Device]] that has been terminated
+   */
   private final case class DeviceTerminated(deviceId: String) extends Command
 
+  /**
+   * Creates a DeviceGroupQuery actor
+   *
+   * @param devices
+   * @param requestId
+   * @param requester
+   * @param timeout
+   * @return A [[DeviceGroupQuery]] actor
+   */
   def apply(
            devices: Map[String, ActorRef[Device.Command]],
            requestId: Long,
