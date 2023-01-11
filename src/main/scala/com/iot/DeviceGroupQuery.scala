@@ -44,10 +44,10 @@ object DeviceGroupQuery {
   /**
    * Creates a DeviceGroupQuery actor
    *
-   * @param devices
-   * @param requestId
-   * @param requester
-   * @param timeout
+   * @param devices a mapping of deviceIds to [[Device Devices]] that are being queried
+   * @param requestId Unique Id for identifying the request
+   * @param requester The [[DeviceManager actor]] that initiated the request. Also the actor to reply to
+   * @param timeout The [[FiniteDuration duration]] before the query times out
    * @return A [[DeviceGroupQuery]] actor
    */
   def apply(
@@ -63,6 +63,16 @@ object DeviceGroupQuery {
   }
 }
 
+/**
+ * DeviceGroupQuery actor. This actor represents an active query and stops after the completion of the query
+ *
+ * @param devices A mapping of deviceIds to [[Device Devices]] that are being queried
+ * @param requestId Unique Id for identifying the request
+ * @param requester The [[DeviceManager actor]] that initiated the request. Also the actor to reply to
+ * @param timeout The [[FiniteDuration duration]] before the query times out
+ * @param context DeviceGroupQuerys [[https://doc.akka.io/api/akka/current/akka/actor/ActorContext.html ActorContext]]
+ * @param timers [[TimerScheduler]] of type [[com.iot.DeviceGroupQuery.Command]]. Used to time out query after a [[FiniteDuration]]
+ */
 class DeviceGroupQuery(
                       devices: Map[String, ActorRef[Device.Command]],
                       requestId: Long,
@@ -87,12 +97,29 @@ class DeviceGroupQuery(
       device ! Device.ReadTemp(0, responseAdapter)
   }
 
+  /**
+   * handles [[Command messages]] sent to the DeviceGroupQuery actor
+   *
+   * [[Command Messages]] supported by DeviceGroupQuery:
+   *  - [[WrappedRespondTemp]]
+   *  - [[ConnectionTimeout]]
+   *  - [[DeviceTerminated]]
+   *
+   * @param msg The [[Command message]]
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   override def onMessage(msg: DeviceGroupQuery.Command): Behavior[DeviceGroupQuery.Command] = msg match {
     case WrappedRespondTemp(reply) => onRespondTemp(reply)
     case ConnectionTimeout => onConnectionTimeout()
     case DeviceTerminated(deviceId) => onDeviceTerminated(deviceId)
   }
 
+  /**
+   * Function for handling a [[WrappedRespondTemp]] message
+   *
+   * @param response A [[Device.RespondTemp]] message from a [[Device]] in the [[DeviceGroup]]
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   private def onRespondTemp(response: Device.RespondTemp): Behavior[Command] = {
 
     val reading = response.value match {
@@ -108,6 +135,12 @@ class DeviceGroupQuery(
 
     respondWhenAllCollected()
   }
+
+  /**
+   * Function for handling a [[ConnectionTimeout]] message
+   *
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   private def onConnectionTimeout(): Behavior[Command] = {
     responses ++= awaitingResponse.map(deviceId => deviceId -> DeviceTimeOut)
     awaitingResponse = Set.empty
@@ -116,6 +149,12 @@ class DeviceGroupQuery(
     respondWhenAllCollected()
   }
 
+  /**
+   * Function for handling a [[DeviceTerminated]] message
+   *
+   * @param deviceId A unique Id for identifying a [[Device]]
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   private def onDeviceTerminated(deviceId: String): Behavior[Command] = {
     if(awaitingResponse.contains(deviceId)) {
       context.log.info(s"device: $deviceId has terminated before responding")
@@ -126,6 +165,11 @@ class DeviceGroupQuery(
     respondWhenAllCollected()
   }
 
+  /**
+   * Function that checks if the query is complete. Responds with the result if it is complete otherwise it waits for the rest of the [[Device devices]]
+   *
+   * @return A [[https://doc.akka.io/api/akka/current/akka/actor/typed/Behavior.html Behavior]] of type [[Command]]
+   */
   private def respondWhenAllCollected(): Behavior[Command] = {
     if( awaitingResponse.isEmpty) {
       context.log.info("Sending response and stopping")
